@@ -7,14 +7,17 @@ import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Controller;
 
 import com.example.chatserver.chat.dto.ChatMessageReqDto;
+import com.example.chatserver.chat.service.RedisPubSubService;
 
 import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.ObjectMapper;
 
 @Controller
 @RequiredArgsConstructor
 public class StompController {
 
 	private final SimpMessageSendingOperations messageTemplate;
+	private final RedisPubSubService redisPubSubService;
 
 	// @MessageMapping("/{roomId}") // 클라이언트에서 특정 /publish/roodId 형태로 메시지를 발행 시 MessageMapping이 수신
 	// @SendTo("/topic/{roomId}") // 해당 rootId에 메시지를 발행하여 구독중인 클라이언트에게 메시지 전송
@@ -27,6 +30,10 @@ public class StompController {
 	@MessageMapping("/{roomId}")
 	public void sendMessage(@DestinationVariable Long roomId, ChatMessageReqDto chatMessageReqDto) {
 		System.out.println(chatMessageReqDto.getMessage());
-		messageTemplate.convertAndSend("/topic/"+roomId, chatMessageReqDto);
+		// messageTemplate.convertAndSend("/topic/"+roomId, chatMessageReqDto);
+		chatMessageReqDto.setRoomId(roomId);
+		ObjectMapper objectMapper = new ObjectMapper();
+		String message = objectMapper.writeValueAsString(chatMessageReqDto);
+		redisPubSubService.publish("chat", message);
 	}
 }
